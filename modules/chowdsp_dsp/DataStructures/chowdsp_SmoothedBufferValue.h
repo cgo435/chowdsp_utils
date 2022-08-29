@@ -34,7 +34,7 @@ public:
     void setRampLength (double rampLengthSeconds);
 
     /** Returns true if the value is currently being smoothed */
-    [[nodiscard]] bool isSmoothing() const noexcept { return smoother.isSmoothing(); }
+    [[nodiscard]] bool isSmoothing() const noexcept { return isCurrentlySmoothing; }
 
     /** Returns the current smoothed value */
     [[nodiscard]] FloatType getCurrentValue() const noexcept { return smoother.getCurrentValue(); }
@@ -65,6 +65,7 @@ public:
 private:
     juce::AudioBuffer<FloatType> buffer;
     juce::SmoothedValue<FloatType, ValueSmoothingType> smoother;
+    bool isCurrentlySmoothing = false;
 
     std::atomic<float>* parameterHandle = nullptr;
 

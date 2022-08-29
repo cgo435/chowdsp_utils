@@ -32,6 +32,7 @@ template <typename FloatType, typename ValueSmoothingTypes>
 void SmoothedBufferValue<FloatType, ValueSmoothingTypes>::reset()
 {
     smoother.reset (sampleRate, rampLengthInSeconds);
+    isCurrentlySmoothing = false;
 }
 
 template <typename FloatType, typename ValueSmoothingTypes>
@@ -57,10 +58,12 @@ void SmoothedBufferValue<FloatType, ValueSmoothingTypes>::process (FloatType val
     auto* bufferData = buffer.getWritePointer (0);
     if (! smoother.isSmoothing())
     {
+        isCurrentlySmoothing = false;
         juce::FloatVectorOperations::fill (bufferData, mappedValue, numSamples);
         return;
     }
 
+    isCurrentlySmoothing = true;
     for (int n = 0; n < numSamples; ++n)
         bufferData[n] = smoother.getNextValue();
 }
