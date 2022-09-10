@@ -100,6 +100,7 @@ JUCE_END_IGNORE_WARNINGS_MSVC
 #include "DataStructures/chowdsp_COLAProcessor.h"
 #include "DataStructures/chowdsp_DoubleBuffer.h"
 #include "DataStructures/chowdsp_LookupTableTransform.h"
+#include "DataStructures/chowdsp_LookupTableCache.h"
 #include "DataStructures/chowdsp_RebufferedProcessor.h"
 #include "DataStructures/chowdsp_SmoothedBufferValue.h"
 #include "DataStructures/chowdsp_ScopedValue.h"
