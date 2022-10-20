@@ -86,7 +86,8 @@ bool BypassProcessor<SampleType, DelayInterpType>::processBlockIn (const juce::d
 
     if (! onOffParam && ! prevOnOffParam)
     {
-        doDelayOp (block, compDelay, DelayOp::Pop);
+        fadeBlock.copyFrom (block);
+        doDelayOp (fadeBlock, compDelay, DelayOp::Pop);
         return false;
     }
 
@@ -134,14 +135,25 @@ void BypassProcessor<SampleType, DelayInterpType>::processBlockOut (juce::dsp::A
         }
     };
 
+    const auto numChannels = block.getNumChannels();
+    const auto numSamples = (int) block.getNumSamples();
+
     if (onOffParam == prevOnOffParam)
     {
+        if (! onOffParam)
+        {
+            for (size_t ch = 0; ch < numChannels; ++ch)
+            {
+                auto* blockPtr = block.getChannelPointer (ch);
+                auto* fadePtr = fadeBlock.getChannelPointer (ch);
+                juce::FloatVectorOperations::copy (blockPtr, fadePtr, numSamples);
+            }
+        }
+
         latencySampleCount = 0;
         return;
     }
 
-    const auto numChannels = block.getNumChannels();
-    const auto numSamples = (int) block.getNumSamples();
     const auto startSample = getFadeStartSample (numSamples);
 
     for (size_t ch = 0; ch < numChannels; ++ch)
