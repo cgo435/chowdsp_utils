@@ -74,11 +74,11 @@ protected:
         return std::exp (jImag * juce::MathConstants<T>::twoPi * (freq / fs));
     }
 
-    std::complex<T> filtCoef = 0;
+    std::complex<T> filtCoef {};
     T decayFactor = 0;
-    std::complex<T> oscCoef = 0;
+    std::complex<T> oscCoef {};
 
-    std::complex<T> y1 = 0; // filter state
+    std::complex<T> y1 {}; // filter state
 
     T freq = 1;
     T t60 = 1;
@@ -91,11 +91,11 @@ protected:
 #if ! CHOWDSP_NO_XSIMD
 //=========================================================================
 /** An implementation of the modal filter parallelised with xsimd::batch<std::complex>. */
-template <typename FloatType>
-class ModalFilter<xsimd::batch<FloatType>>
+template <typename FloatType, typename Arch>
+class ModalFilter<xsimd::batch<FloatType, Arch>>
 {
-    using VType = xsimd::batch<FloatType>;
-    using CType = xsimd::batch<std::complex<FloatType>>;
+    using VType = xsimd::batch<FloatType, Arch>;
+    using CType = xsimd::batch<std::complex<FloatType>, Arch>;
 
 public:
     ModalFilter() = default;
@@ -108,7 +108,7 @@ public:
     virtual inline void reset() noexcept { y1 = CType {}; }
 
     /** Sets the scalar amplitude of the filter */
-    virtual inline void setAmp (VType amp) noexcept { amplitude = CType { amp, xsimd::batch ((FloatType) 0) }; }
+    virtual inline void setAmp (VType amp) noexcept { amplitude = CType { amp, VType ((FloatType) 0) }; }
 
     /** Sets the scalar amplitude of the filter */
     virtual inline void setAmp (CType amp) noexcept { amplitude = amp; }
@@ -175,3 +175,5 @@ protected:
 };
 #endif // ! CHOWDSP_NO_XSIMD
 } // namespace chowdsp
+
+#include "chowdsp_ModalFilter.cpp"

@@ -26,7 +26,13 @@ namespace buffer_detail
 /**
  * An audio sample buffer that allocates its own memory.
  */
-template <typename SampleType>
+template <typename SampleType, size_t alignment
+#if CHOWDSP_NO_XSIMD
+                               = 16
+#else
+                               = xsimd::default_arch::alignment()
+#endif
+          >
 class Buffer
 {
 public:
@@ -40,10 +46,10 @@ public:
     Buffer (int numChannels, int numSamples);
 
     /** Move constructor */
-    Buffer (Buffer<SampleType>&&) noexcept = default;
+    Buffer (Buffer<SampleType, alignment>&&) noexcept = default;
 
     /** Move assignment */
-    Buffer<SampleType>& operator= (Buffer<SampleType>&&) noexcept = default;
+    Buffer<SampleType, alignment>& operator= (Buffer<SampleType, alignment>&&) noexcept = default;
 
     /**
      * Sets the maximum size that this buffer can have, and sets the current size as well.
@@ -103,7 +109,7 @@ public:
 
 private:
 #if ! CHOWDSP_NO_XSIMD
-    using Allocator = xsimd::default_allocator<SampleType>;
+    using Allocator = xsimd::aligned_allocator<SampleTypeHelpers::NumericType<SampleType>, alignment>;
 #else
     using Allocator = std::allocator<SampleType>;
 #endif
@@ -122,3 +128,5 @@ private:
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Buffer)
 };
 } // namespace chowdsp
+
+#include "chowdsp_Buffer.cpp"

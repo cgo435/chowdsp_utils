@@ -6,22 +6,22 @@ namespace chowdsp::SIMDUtils
 
 using namespace SampleTypeHelpers;
 
-template <typename Type>
-inline xsimd::batch<Type> SIMDComplexMulReal (const xsimd::batch<std::complex<Type>>& a, const xsimd::batch<std::complex<Type>>& b)
+template <typename Type, typename Arch>
+inline xsimd::batch<Type, Arch> SIMDComplexMulReal (const xsimd::batch<std::complex<Type>, Arch>& a, const xsimd::batch<std::complex<Type>, Arch>& b)
 {
     return (a.real() * b.real()) - (a.imag() * b.imag());
 }
 
-template <typename Type>
-inline xsimd::batch<Type> SIMDComplexMulImag (const xsimd::batch<std::complex<Type>>& a, const xsimd::batch<std::complex<Type>>& b)
+template <typename Type, typename Arch>
+inline xsimd::batch<Type, Arch> SIMDComplexMulImag (const xsimd::batch<std::complex<Type>, Arch>& a, const xsimd::batch<std::complex<Type>, Arch>& b)
 {
     return (a.real() * b.imag()) + (a.imag() * b.real());
 }
 
 /** SIMDComplex implementation of std::pow */
-template <typename BaseType, typename OtherType>
-inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd::batch<std::complex<BaseType>>>
-    pow (const xsimd::batch<std::complex<BaseType>>& a, OtherType x)
+template <typename BaseType, typename OtherType, typename Arch>
+inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd::batch<std::complex<BaseType>, Arch>>
+    pow (const xsimd::batch<std::complex<BaseType>, Arch>& a, OtherType x)
 {
     auto absa = xsimd::abs (a);
     auto arga = xsimd::arg (a);
@@ -32,12 +32,12 @@ inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd:
 }
 
 /** SIMDComplex implementation of std::pow */
-template <typename BaseType, typename OtherType>
-inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd::batch<std::complex<BaseType>>>
-    pow (OtherType a, const xsimd::batch<std::complex<BaseType>>& z)
+template <typename BaseType, typename OtherType, typename Arch>
+inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd::batch<std::complex<BaseType>, Arch>>
+    pow (OtherType a, const xsimd::batch<std::complex<BaseType>, Arch>& z)
 {
     // same as the complex/complex xsimd implementation, except that we can skip calling arg()!
-    const auto ze = xsimd::batch ((BaseType) 0);
+    const auto ze = xsimd::batch<BaseType, Arch> ((BaseType) 0);
 
     auto absa = xsimd::abs (a);
     auto arga = xsimd::select (a >= ze, ze, xsimd::batch (juce::MathConstants<BaseType>::pi)); // since a is real, we know arg must be either 0 or pi
@@ -53,15 +53,15 @@ inline std::enable_if_t<std::is_same_v<NumericType<OtherType>, BaseType>, xsimd:
     return { r * sincosTheta.second, r * sincosTheta.first };
 }
 
-template <typename BaseType>
-inline xsimd::batch<std::complex<BaseType>> polar (const xsimd::batch<BaseType>& mag, const xsimd::batch<BaseType>& angle)
+template <typename BaseType, typename Arch>
+inline xsimd::batch<std::complex<BaseType>, Arch> polar (const xsimd::batch<BaseType, Arch>& mag, const xsimd::batch<BaseType, Arch>& angle)
 {
     auto sincosTheta = xsimd::sincos (angle);
     return { mag * sincosTheta.second, mag * sincosTheta.first };
 }
 
-template <typename BaseType>
-inline static xsimd::batch<std::complex<BaseType>> polar (const xsimd::batch<BaseType>& angle)
+template <typename BaseType, typename Arch>
+inline static xsimd::batch<std::complex<BaseType>, Arch> polar (const xsimd::batch<BaseType, Arch>& angle)
 {
     auto sincosTheta = xsimd::sincos (angle);
     return { sincosTheta.second, sincosTheta.first };

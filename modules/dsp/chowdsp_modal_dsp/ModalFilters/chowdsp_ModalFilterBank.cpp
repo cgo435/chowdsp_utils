@@ -1,10 +1,8 @@
-#include "chowdsp_ModalFilterBank.h"
-
 namespace chowdsp
 {
-template <size_t maxNumModes, typename SampleType>
+template <size_t maxNumModes, typename SampleType, typename Arch>
 template <typename PerModeFunc, typename PerVecModeFunc>
-void ModalFilterBank<maxNumModes, SampleType>::doForModes (PerModeFunc&& perModeFunc, PerVecModeFunc&& perVecModeFunc)
+void ModalFilterBank<maxNumModes, SampleType, Arch>::doForModes (PerModeFunc&& perModeFunc, PerVecModeFunc&& perVecModeFunc)
 {
     size_t i = 0;
     for (auto& mode : modes)
@@ -17,14 +15,14 @@ void ModalFilterBank<maxNumModes, SampleType>::doForModes (PerModeFunc&& perMode
     }
 }
 
-template <size_t maxNumModes, typename SampleType>
-typename ModalFilterBank<maxNumModes, SampleType>::Vec ModalFilterBank<maxNumModes, SampleType>::tau2t60 (Vec tau, SampleType originalSampleRate)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+typename ModalFilterBank<maxNumModes, SampleType, Arch>::Vec ModalFilterBank<maxNumModes, SampleType, Arch>::tau2t60 (Vec tau, SampleType originalSampleRate)
 {
     return Vec ((SampleType) 1) / (xsimd::log (xsimd::exp (originalSampleRate / tau)) / log1000);
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeAmplitudes (const SampleType (&ampsReal)[maxNumModes], const SampleType (&ampsImag)[maxNumModes], SampleType normalize)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeAmplitudes (const SampleType (&ampsReal)[maxNumModes], const SampleType (&ampsImag)[maxNumModes], SampleType normalize)
 {
     for (size_t i = 0; i < (size_t) maxNumModes; ++i)
         amplitudeData[i] = std::complex<SampleType> { ampsReal[i], ampsImag[i] };
@@ -33,16 +31,16 @@ void ModalFilterBank<maxNumModes, SampleType>::setModeAmplitudes (const SampleTy
     setModeAmplitudesInternal();
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeAmplitudes (const std::complex<SampleType> (&amps)[maxNumModes], SampleType normalize)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeAmplitudes (const std::complex<SampleType> (&amps)[maxNumModes], SampleType normalize)
 {
     std::copy (amps, amps + maxNumModes, amplitudeData.begin());
     updateAmplitudeNormalizationFactor (normalize);
     setModeAmplitudesInternal();
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::updateAmplitudeNormalizationFactor (SampleType normalize)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::updateAmplitudeNormalizationFactor (SampleType normalize)
 {
     auto lowestModeMag = std::abs (amplitudeData[0]);
     if (normalize > (SampleType) 0 && lowestModeMag > (SampleType) 0)
@@ -51,23 +49,23 @@ void ModalFilterBank<maxNumModes, SampleType>::updateAmplitudeNormalizationFacto
         amplitudeNormalizationFactor = (SampleType) 1;
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeAmplitudesInternal()
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeAmplitudesInternal()
 {
-    std::complex<SampleType> modeAmps alignas (xsimd::default_arch::alignment())[vecSize] {};
+    std::complex<SampleType> modeAmps alignas (Arch::alignment())[vecSize] {};
     doForModes (
         [&] (size_t j, size_t modeIndex)
         {
             modeAmps[j] = modeIndex < numModesToProcess ? amplitudeData[modeIndex] * amplitudeNormalizationFactor : (SampleType) 0;
         },
         [&] (auto& mode)
-        { mode.setAmp (xsimd::load_aligned (modeAmps)); });
+        { mode.setAmp (xsimd::load_aligned<Arch> (modeAmps)); });
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeFrequencies (const SampleType (&baseFrequencies)[maxNumModes], SampleType frequencyMultiplier)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeFrequencies (const SampleType (&baseFrequencies)[maxNumModes], SampleType frequencyMultiplier)
 {
-    SampleType modeFreqs alignas (xsimd::default_arch::alignment())[vecSize] {};
+    SampleType modeFreqs alignas (Arch::alignment())[vecSize] {};
     doForModes (
         [&] (size_t j, size_t modeIndex)
         {
@@ -75,33 +73,33 @@ void ModalFilterBank<maxNumModes, SampleType>::setModeFrequencies (const SampleT
             modeFreqs[j] = freq > maxFreq ? (SampleType) 0 : freq;
         },
         [&] (auto& mode)
-        { mode.setFreq (xsimd::load_aligned (modeFreqs)); });
+        { mode.setFreq (xsimd::load_aligned<Arch> (modeFreqs)); });
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeDecays (const SampleType (&baseTaus)[maxNumModes], SampleType originalSampleRate, SampleType decayFactor)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeDecays (const SampleType (&baseTaus)[maxNumModes], SampleType originalSampleRate, SampleType decayFactor)
 {
-    SampleType modeTaus alignas (xsimd::default_arch::alignment())[vecSize] {};
+    SampleType modeTaus alignas (Arch::alignment())[vecSize] {};
     doForModes (
         [&] (size_t j, size_t modeIndex)
         { modeTaus[j] = modeIndex < maxNumModes ? baseTaus[modeIndex] : (SampleType) 1; },
         [&] (auto& mode)
-        { mode.setDecay (tau2t60 (xsimd::load_aligned (modeTaus), originalSampleRate) * decayFactor); });
+        { mode.setDecay (tau2t60 (xsimd::load_aligned<Arch> (modeTaus), originalSampleRate) * decayFactor); });
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setModeDecays (const SampleType (&t60s)[maxNumModes])
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setModeDecays (const SampleType (&t60s)[maxNumModes])
 {
-    SampleType modeT60s alignas (xsimd::default_arch::alignment())[vecSize] {};
+    SampleType modeT60s alignas (Arch::alignment())[vecSize] {};
     doForModes (
         [&] (size_t j, size_t modeIndex)
         { modeT60s[j] = modeIndex < maxNumModes ? t60s[modeIndex] : (SampleType) 0; },
         [&] (auto& mode)
-        { mode.setDecay (xsimd::load_aligned (modeT60s)); });
+        { mode.setDecay (xsimd::load_aligned<Arch> (modeT60s)); });
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::setNumModesToProcess (size_t newNumModesToProcess)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::setNumModesToProcess (size_t newNumModesToProcess)
 {
     jassert (newNumModesToProcess <= maxNumModes);
 
@@ -113,8 +111,8 @@ void ModalFilterBank<maxNumModes, SampleType>::setNumModesToProcess (size_t newN
         modes[modeIndex].reset();
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::prepare (double sampleRate, int samplesPerBlock)
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::prepare (double sampleRate, int samplesPerBlock)
 {
     maxFreq = SampleType (0.495 * sampleRate);
     renderBuffer.setMaxSize (1, samplesPerBlock);
@@ -123,15 +121,15 @@ void ModalFilterBank<maxNumModes, SampleType>::prepare (double sampleRate, int s
         mode.prepare ((SampleType) sampleRate);
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::reset()
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::reset()
 {
     for (auto& mode : modes)
         mode.reset();
 }
 
-template <size_t maxNumModes, typename SampleType>
-void ModalFilterBank<maxNumModes, SampleType>::process (const BufferView<const SampleType>& block) noexcept
+template <size_t maxNumModes, typename SampleType, typename Arch>
+void ModalFilterBank<maxNumModes, SampleType, Arch>::process (const BufferView<const SampleType>& block) noexcept
 {
     const auto numSamples = block.getNumSamples();
 
@@ -148,9 +146,9 @@ void ModalFilterBank<maxNumModes, SampleType>::process (const BufferView<const S
     }
 }
 
-template <size_t maxNumModes, typename SampleType>
+template <size_t maxNumModes, typename SampleType, typename Arch>
 template <typename Modulator>
-void ModalFilterBank<maxNumModes, SampleType>::processWithModulation (const BufferView<const SampleType>& block, Modulator&& modulator) noexcept
+void ModalFilterBank<maxNumModes, SampleType, Arch>::processWithModulation (const BufferView<const SampleType>& block, Modulator&& modulator) noexcept
 {
     const auto numSamples = block.getNumSamples();
 
@@ -170,6 +168,6 @@ void ModalFilterBank<maxNumModes, SampleType>::processWithModulation (const Buff
     }
 }
 
-template <size_t maxNumModes, typename SampleType>
-const SampleType ModalFilterBank<maxNumModes, SampleType>::log1000 = std::log ((SampleType) 1000);
+template <size_t maxNumModes, typename SampleType, typename Arch>
+const SampleType ModalFilterBank<maxNumModes, SampleType, Arch>::log1000 = std::log ((SampleType) 1000);
 } // namespace chowdsp

@@ -4,13 +4,13 @@
 namespace chowdsp
 {
 /** A parallel bank of modal filters, with SIMD vectorization */
-template <size_t maxNumModes, typename SampleType = float>
+template <size_t maxNumModes, typename SampleType = float, typename Arch = xsimd::default_arch>
 class ModalFilterBank
 {
 public:
     static_assert (std::is_floating_point_v<SampleType>, "SampleType must be a floating point type!");
 
-    using Vec = xsimd::batch<SampleType>;
+    using Vec = xsimd::batch<SampleType, Arch>;
     static constexpr auto vecSize = Vec::size;
     static constexpr auto maxNumVecModes = Math::ceiling_divide (maxNumModes, vecSize);
 
@@ -79,7 +79,7 @@ private:
     std::array<std::complex<SampleType>, maxNumModes> amplitudeData;
     SampleType amplitudeNormalizationFactor = (SampleType) 1;
 
-    Buffer<SampleType> renderBuffer;
+    Buffer<SampleType, Arch::alignment()> renderBuffer;
     SampleType maxFreq = (SampleType) 0;
     size_t numModesToProcess = maxNumModes;
     size_t numVecModesToProcess = maxNumVecModes;

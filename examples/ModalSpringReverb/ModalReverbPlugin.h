@@ -16,7 +16,8 @@ struct Parameters : chowdsp::ParamHolder
              mixParam,
              modModesParam,
              modFreqParam,
-             modDepthParam);
+             modDepthParam,
+             useAVXParam);
     }
 
     chowdsp::PercentParameter::Ptr pitchParam { juce::ParameterID { "pitch", 100 },
@@ -45,6 +46,12 @@ struct Parameters : chowdsp::ParamHolder
 
     chowdsp::PercentParameter::Ptr modDepthParam { juce::ParameterID { "mod_depth", 100 },
                                                    "Mod. Depth" };
+
+#if XSIMD_WITH_AVX
+    chowdsp::BoolParameter::Ptr useAVXParam { juce::ParameterID { "use_avx", 100 },
+                                              "Use AVX",
+                                              false };
+#endif
 };
 
 class ModalReverbPlugin : public chowdsp::PluginBase<chowdsp::PluginStateImpl<Parameters>>
@@ -59,10 +66,17 @@ public:
     juce::AudioProcessorEditor* createEditor() override;
 
 private:
+#if JUCE_INTEL
+#if XSIMD_WITH_AVX
+    chowdsp::ModalFilterBank<ModeParams::numModes, float, xsimd::avx> modalFilterBankAVX;
+#endif
+    chowdsp::ModalFilterBank<ModeParams::numModes, float, xsimd::sse4_1> modalFilterBank;
+#elif JUCE_ARM
     chowdsp::ModalFilterBank<ModeParams::numModes> modalFilterBank;
+#endif
 
     chowdsp::SineWave<float> modSine;
-    juce::AudioBuffer<float> modBuffer;
+    chowdsp::Buffer<float> modBuffer;
 
     juce::dsp::DryWetMixer<float> mixer;
 

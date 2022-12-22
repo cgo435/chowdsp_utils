@@ -1,15 +1,13 @@
-#include "chowdsp_Buffer.h"
-
 namespace chowdsp
 {
-template <typename SampleType>
-Buffer<SampleType>::Buffer (int numChannels, int numSamples)
+template <typename SampleType, size_t alignment>
+Buffer<SampleType, alignment>::Buffer (int numChannels, int numSamples)
 {
     setMaxSize (numChannels, numSamples);
 }
 
-template <typename SampleType>
-void Buffer<SampleType>::setMaxSize (int numChannels, int numSamples)
+template <typename SampleType, size_t alignment>
+void Buffer<SampleType, alignment>::setMaxSize (int numChannels, int numSamples)
 {
     jassert (juce::isPositiveAndBelow (numChannels, maxNumChannels));
     jassert (numSamples > 0);
@@ -27,8 +25,8 @@ void Buffer<SampleType>::setMaxSize (int numChannels, int numSamples)
     setCurrentSize (numChannels, numSamples);
 }
 
-template <typename SampleType>
-void Buffer<SampleType>::setCurrentSize (int numChannels, int numSamples) noexcept
+template <typename SampleType, size_t alignment>
+void Buffer<SampleType, alignment>::setCurrentSize (int numChannels, int numSamples) noexcept
 {
     const auto increasingNumChannels = numChannels > currentNumChannels;
     const auto increasingNumSamples = numSamples > currentNumSamples;
@@ -43,62 +41,62 @@ void Buffer<SampleType>::setCurrentSize (int numChannels, int numSamples) noexce
     currentNumSamples = numSamples;
 }
 
-template <typename SampleType>
-SampleType* Buffer<SampleType>::getWritePointer (int channel) noexcept
+template <typename SampleType, size_t alignment>
+SampleType* Buffer<SampleType, alignment>::getWritePointer (int channel) noexcept
 {
     hasBeenCleared = false;
     return channelPointers[(size_t) channel];
 }
 
-template <typename SampleType>
-const SampleType* Buffer<SampleType>::getReadPointer (int channel) const noexcept
+template <typename SampleType, size_t alignment>
+const SampleType* Buffer<SampleType, alignment>::getReadPointer (int channel) const noexcept
 {
     return channelPointers[(size_t) channel];
 }
 
-template <typename SampleType>
-SampleType** Buffer<SampleType>::getArrayOfWritePointers() noexcept
+template <typename SampleType, size_t alignment>
+SampleType** Buffer<SampleType, alignment>::getArrayOfWritePointers() noexcept
 {
     hasBeenCleared = false;
     return channelPointers.data();
 }
 
-template <typename SampleType>
-const SampleType** Buffer<SampleType>::getArrayOfReadPointers() const noexcept
+template <typename SampleType, size_t alignment>
+const SampleType** Buffer<SampleType, alignment>::getArrayOfReadPointers() const noexcept
 {
     return const_cast<const SampleType**> (channelPointers.data()); // NOSONAR (using const_cast to be more strict)
 }
 
 #if CHOWDSP_USING_JUCE
-template <typename SampleType>
-juce::AudioBuffer<SampleType> Buffer<SampleType>::toAudioBuffer()
+template <typename SampleType, size_t alignment>
+juce::AudioBuffer<SampleType> Buffer<SampleType, alignment>::toAudioBuffer()
 {
     return { getArrayOfWritePointers(), currentNumChannels, currentNumSamples };
 }
 
-template <typename SampleType>
-juce::AudioBuffer<SampleType> Buffer<SampleType>::toAudioBuffer() const
+template <typename SampleType, size_t alignment>
+juce::AudioBuffer<SampleType> Buffer<SampleType, alignment>::toAudioBuffer() const
 {
     return { const_cast<SampleType* const*> (getArrayOfReadPointers()), currentNumChannels, currentNumSamples }; // NOSONAR
 }
 
 #if JUCE_MODULE_AVAILABLE_juce_dsp
-template <typename SampleType>
-AudioBlock<SampleType> Buffer<SampleType>::toAudioBlock()
+template <typename SampleType, size_t alignment>
+AudioBlock<SampleType> Buffer<SampleType, alignment>::toAudioBlock()
 {
     return { getArrayOfWritePointers(), (size_t) currentNumChannels, (size_t) currentNumSamples };
 }
 
-template <typename SampleType>
-AudioBlock<const SampleType> Buffer<SampleType>::toAudioBlock() const
+template <typename SampleType, size_t alignment>
+AudioBlock<const SampleType> Buffer<SampleType, alignment>::toAudioBlock() const
 {
     return { getArrayOfReadPointers(), (size_t) currentNumChannels, (size_t) currentNumSamples };
 }
 #endif
 #endif
 
-template <typename SampleType>
-void Buffer<SampleType>::clear() noexcept
+template <typename SampleType, size_t alignment>
+void Buffer<SampleType, alignment>::clear() noexcept
 {
     if (hasBeenCleared)
         return;
@@ -106,11 +104,4 @@ void Buffer<SampleType>::clear() noexcept
     buffer_detail::clear (channelPointers.data(), 0, currentNumChannels, 0, currentNumSamples);
     hasBeenCleared = true;
 }
-
-template class Buffer<float>;
-template class Buffer<double>;
-#if ! CHOWDSP_NO_XSIMD
-template class Buffer<xsimd::batch<float>>;
-template class Buffer<xsimd::batch<double>>;
-#endif
 } // namespace chowdsp
