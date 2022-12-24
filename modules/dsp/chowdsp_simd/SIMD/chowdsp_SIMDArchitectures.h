@@ -23,7 +23,7 @@ using baseSIMDArch = xsimd::sse2;
 
 #if XSIMD_WITH_AVX
 /** Advanced SIMD architecture for this platform. */
-using advancedSIMDArch = xsimd::avx;
+using advancedSIMDArch = xsimd::avx; // maybe bump this up to xsimd::fma3<xsimd::avx2> (Haswell)?
 #else
 /** Advanced SIMD architecture for this platform. */
 using advancedSIMDArch = xsimd::sse2;

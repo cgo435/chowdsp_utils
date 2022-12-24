@@ -2,6 +2,7 @@
 #include <chowdsp_math/chowdsp_math.h>
 #include <numeric>
 #include <algorithm>
+#include <iostream>
 
 template <typename T, typename VectorOp, typename ReferenceOp>
 void testReduce1dOp (std::vector<T>& in, VectorOp&& vectorOp, ReferenceOp&& referenceOp, T maxError)
@@ -129,9 +130,9 @@ TEMPLATE_TEST_CASE ("FloatVectorOperations Test", "", float, double)
         INFO ("chowdsp::FloatVectorOperations: not using vDSP")
 
     if (chowdsp::FloatVectorOperations::isUsingAdvancedSIMDArch())
-        INFO ("chowdsp::FloatVectorOperations: using advanced SIMD architecture")
+        std::cout << "chowdsp::FloatVectorOperations: using advanced SIMD architecture" << std::endl;
     else
-        INFO ("chowdsp::FloatVectorOperations: not using advanced SIMD architecture")
+        std::cout << "chowdsp::FloatVectorOperations: not using advanced SIMD architecture" << std::endl;
 
     std::random_device rd;
     std::mt19937 mt (rd());
