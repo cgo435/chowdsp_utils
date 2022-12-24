@@ -121,12 +121,17 @@ void testBinaryOp (std::vector<T>& in1, std::vector<T>& in2, VectorOp&& vectorOp
 
 TEMPLATE_TEST_CASE ("FloatVectorOperations Test", "", float, double)
 {
-    chowdsp::FloatVectorOperations::setUsingAdvancedSIMDArch (true); // (xsimd::avx2::version() <= xsimd::available_architectures().best);
+    chowdsp::FloatVectorOperations::setUsingAdvancedSIMDArch (chowdsp::advancedSIMDArch::version() <= xsimd::available_architectures().best);
 
     if (chowdsp::FloatVectorOperations::isUsingVDSP())
         INFO ("chowdsp::FloatVectorOperations: using vDSP")
     else
         INFO ("chowdsp::FloatVectorOperations: not using vDSP")
+
+    if (chowdsp::FloatVectorOperations::isUsingAdvancedSIMDArch())
+        INFO ("chowdsp::FloatVectorOperations: using advanced SIMD architecture")
+    else
+        INFO ("chowdsp::FloatVectorOperations: not using advanced SIMD architecture")
 
     std::random_device rd;
     std::mt19937 mt (rd());
