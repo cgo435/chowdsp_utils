@@ -54,12 +54,11 @@ JUCE_BEGIN_IGNORE_WARNINGS_MSVC (4244)
 JUCE_END_IGNORE_WARNINGS_GCC_LIKE
 JUCE_END_IGNORE_WARNINGS_MSVC
 
-#include "SIMD/chowdsp_SIMDAlignment.h"
+#include "SIMD/chowdsp_SIMDArchitectures.h"
 #include "SIMD/chowdsp_SampleTypeHelpers.h"
 #include "SIMD/chowdsp_SIMDUtils.h"
 #include "SIMD/chowdsp_SIMDAlignmentHelpers.h"
 #include "SIMD/chowdsp_SIMDLogic.h"
-#include "SIMD/chowdsp_SIMDSpecialMath.h"
 #include "SIMD/chowdsp_SIMDDecibels.h"
 #include "SIMD/chowdsp_SIMDSmoothedValue.h"
 #include "SIMD/chowdsp_SIMDComplexMathOps.h"

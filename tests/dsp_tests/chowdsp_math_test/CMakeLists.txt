@@ -12,3 +12,7 @@ target_sources(chowdsp_math_test
         PolylogarithmTest.cpp
         RatioTest.cpp
 )
+
+if(CHOWDSP_BUILD_TESTS_WITH_AVX)
+    chowdsp_add_avx_flags_if_available(chowdsp_math_test)
+endif()

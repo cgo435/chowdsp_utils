@@ -575,7 +575,7 @@ float FloatVectorOperations::findAbsoluteMaximum (const float* src, int numValue
         [] (auto a, auto b)
         { return xsimd::max (xsimd::abs (a), xsimd::abs (b)); },
         [] (auto x)
-        { return SIMDUtils::hAbsMaxSIMD (x); });
+        { return xsimd::reduce_max (x); });
 #endif
 }
 
@@ -609,7 +609,7 @@ double FloatVectorOperations::findAbsoluteMaximum (const double* src, int numVal
         [] (auto a, auto b)
         { return xsimd::max (a, xsimd::abs (b)); },
         [] (auto x)
-        { return SIMDUtils::hMaxSIMD (x); });
+        { return xsimd::reduce_max (x); });
 #endif
 }
 
@@ -874,7 +874,7 @@ template float FloatVectorOperations::innerProduct<baseSIMDArch> (const float*, 
 template double FloatVectorOperations::innerProduct<baseSIMDArch> (const double*, const double*, int) noexcept;
 template float FloatVectorOperations::findAbsoluteMaximum<baseSIMDArch> (const float*, int);
 template double FloatVectorOperations::findAbsoluteMaximum<baseSIMDArch> (const double*, int);
-#if JUCE_INTEL
+#if JUCE_INTEL && XSIMD_WITH_AVX
 template void FloatVectorOperations::divide<advancedSIMDArch> (float*, const float*, const float*, int);
 template void FloatVectorOperations::divide<advancedSIMDArch> (double*, const double*, const double*, int);
 template void FloatVectorOperations::divide<advancedSIMDArch> (float*, float, const float*, int);

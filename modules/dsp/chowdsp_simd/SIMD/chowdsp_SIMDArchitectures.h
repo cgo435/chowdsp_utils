@@ -21,8 +21,13 @@ using advancedSIMDArch = DummySIMDArchitecture;
 /** Base SIMD architecture for this platform. */
 using baseSIMDArch = xsimd::sse2;
 
+#if XSIMD_WITH_AVX
 /** Advanced SIMD architecture for this platform. */
 using advancedSIMDArch = xsimd::avx;
+#else
+/** Advanced SIMD architecture for this platform. */
+using advancedSIMDArch = xsimd::sse2;
+#endif
 
 #elif JUCE_ARM
 /** Base SIMD architecture for this platform. */

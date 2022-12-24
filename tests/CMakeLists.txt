@@ -22,6 +22,11 @@ add_subdirectory(${CMAKE_SOURCE_DIR}/../clap-juce-extensions clap_juce_extension
 
 option(CODE_COVERAGE "Enable coverage reporting" OFF)
 
+option(CHOWDSP_BUILD_TESTS_WITH_AVX "Build DSP tests with AVX instructions enabled" OFF)
+if(CHOWDSP_BUILD_TESTS_WITH_AVX)
+    include(SIMDExtensions)
+endif()
+
 add_subdirectory(common_tests)
 add_subdirectory(dsp_tests)
 add_subdirectory(plugin_tests)
