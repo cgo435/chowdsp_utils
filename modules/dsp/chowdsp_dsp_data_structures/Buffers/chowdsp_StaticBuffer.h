@@ -5,7 +5,7 @@ namespace chowdsp
 #ifndef DOXYGEN
 namespace buffer_detail
 {
-    template <typename ElementType, size_t arraySize, size_t alignment = SIMDUtils::defaultSIMDAlignment>
+    template <typename ElementType, size_t arraySize, size_t alignment = baseSIMDArch::alignment()>
     struct AlignedArray
     {
         ElementType* data() noexcept { return array; }

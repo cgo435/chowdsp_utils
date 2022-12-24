@@ -1,5 +1,3 @@
-#include "chowdsp_StaticBuffer.h"
-
 namespace chowdsp
 {
 template <typename SampleType, int maxNumChannels, int maxNumSamples>

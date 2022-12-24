@@ -3,10 +3,10 @@
 namespace chowdsp::SIMDUtils
 {
 /** Returns true if the pointer is aligned to its required SIMD byte boundary. */
-template <typename T>
+template <typename Arch = baseSIMDArch, typename T = float>
 static bool isAligned (const T* p) noexcept
 {
-    static constexpr auto RegisterSize = sizeof (xsimd::batch<T>);
+    static constexpr auto RegisterSize = sizeof (xsimd::batch<T, Arch>);
     uintptr_t bitmask = RegisterSize - 1;
     return ((uintptr_t) p & bitmask) == 0;
 }
@@ -22,10 +22,10 @@ inline Type* snapPointerToAlignment (Type* basePointer, IntegerType alignmentByt
 }
 
 /** Returns the next aligned pointer after this one. */
-template <typename T>
+template <typename Arch = baseSIMDArch, typename T = float>
 static T* getNextAlignedPtr (T* p) noexcept
 {
-    static constexpr auto RegisterSize = sizeof (xsimd::batch<std::remove_const_t<T>>);
+    static constexpr auto RegisterSize = sizeof (xsimd::batch<std::remove_const_t<T>, Arch>);
     return snapPointerToAlignment (p, RegisterSize);
 }
 } // namespace chowdsp::SIMDUtils

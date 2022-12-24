@@ -258,7 +258,7 @@ namespace DelayLineInterpolationTypes
 #endif
         }
 
-        T sinctable alignas (SIMDUtils::defaultSIMDAlignment)[(M + 1) * N * 2];
+        T sinctable alignas (baseSIMDArch::alignment())[(M + 1) * N * 2];
     };
     JUCE_END_IGNORE_WARNINGS_MSVC
 } // namespace DelayLineInterpolationTypes

@@ -1,11 +1,11 @@
 #include <cmath>
 #include "chowdsp_FloatVectorOperations.h"
 
-namespace chowdsp::FloatVectorOperations
+namespace chowdsp
 {
 #if ! CHOWDSP_NO_XSIMD
 #ifndef DOXYGEN
-namespace detail
+namespace fvo_detail
 {
     template <typename T, typename Op>
     void unaryOpFallback (T* dest, const T* src, int numValues, Op&& op)
@@ -14,10 +14,10 @@ namespace detail
             dest[i] = op (src[i]);
     }
 
-    template <typename T, typename ScalarOp, typename VecOp, typename LoadOpType, typename StoreOpType>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp, typename LoadOpType, typename StoreOpType>
     void unaryOp (T* dest, const T* src, int numValues, ScalarOp&& scalarOp, VecOp&& vecOp, LoadOpType&& loadOp, StoreOpType&& storeOp)
     {
-        constexpr auto vecSize = (int) xsimd::batch<T>::size;
+        constexpr auto vecSize = (int) xsimd::batch<T, Arch>::size;
         auto numVecOps = numValues / vecSize;
 
         // Fallback: not enough operations to justify vectorizing!
@@ -41,41 +41,41 @@ namespace detail
             unaryOpFallback (dest, src, leftoverValues, std::forward<ScalarOp> (scalarOp));
     }
 
-    template <typename T, typename ScalarOp, typename VecOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp>
     void unaryOp (T* dest, const T* src, int numValues, ScalarOp&& scalarOp, VecOp&& vecOp)
     {
         auto loadA = [] (const auto* ptr)
-        { return xsimd::load_aligned (ptr); };
+        { return xsimd::load_aligned<Arch> (ptr); };
 
         auto loadU = [] (const auto* ptr)
-        { return xsimd::load_unaligned (ptr); };
+        { return xsimd::load_unaligned<Arch> (ptr); };
 
         auto storeA = [] (auto* ptr, const auto& reg)
-        { xsimd::store_aligned (ptr, reg); };
+        { xsimd::store_aligned<Arch> (ptr, reg); };
 
         auto storeU = [] (auto* ptr, const auto& reg)
-        { xsimd::store_unaligned (ptr, reg); };
+        { xsimd::store_unaligned<Arch> (ptr, reg); };
 
-        if (SIMDUtils::isAligned (dest))
+        if (SIMDUtils::isAligned<Arch> (dest))
         {
-            if (SIMDUtils::isAligned (src))
-                unaryOp (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, storeA);
+            if (SIMDUtils::isAligned<Arch> (src))
+                unaryOp<Arch> (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, storeA);
             else
-                unaryOp (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, storeA);
+                unaryOp<Arch> (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, storeA);
         }
         else
         {
-            if (SIMDUtils::isAligned (src))
-                unaryOp (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, storeU);
+            if (SIMDUtils::isAligned<Arch> (src))
+                unaryOp<Arch> (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, storeU);
             else
-                unaryOp (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, storeU);
+                unaryOp<Arch> (dest, src, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, storeU);
         }
     }
 
-    template <typename T, typename Op>
+    template <typename Arch, typename T, typename Op>
     void unaryOp (T* dest, const T* src, int numValues, Op&& op)
     {
-        unaryOp (dest, src, numValues, std::forward<Op> (op), std::forward<Op> (op));
+        unaryOp<Arch> (dest, src, numValues, std::forward<Op> (op), std::forward<Op> (op));
     }
 
     template <typename T, typename Op>
@@ -85,10 +85,10 @@ namespace detail
             dest[i] = op (src1[i], src2[i]);
     }
 
-    template <typename T, typename ScalarOp, typename VecOp, typename LoadOp1Type, typename LoadOp2Type, typename StoreOpType>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp, typename LoadOp1Type, typename LoadOp2Type, typename StoreOpType>
     void binaryOp (T* dest, const T* src1, const T* src2, int numValues, ScalarOp&& scalarOp, VecOp&& vecOp, LoadOp1Type&& loadOp1, LoadOp2Type&& loadOp2, StoreOpType&& storeOp) // NOSONAR (too many parameters)
     {
-        constexpr auto vecSize = (int) xsimd::batch<T>::size;
+        constexpr auto vecSize = (int) xsimd::batch<T, Arch>::size;
         auto numVecOps = numValues / vecSize;
 
         // Fallback: not enough operations to justify vectorizing!
@@ -113,61 +113,61 @@ namespace detail
             binaryOpFallback (dest, src1, src2, leftoverValues, std::forward<ScalarOp> (scalarOp));
     }
 
-    template <typename T, typename ScalarOp, typename VecOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp>
     void binaryOp (T* dest, const T* src1, const T* src2, int numValues, ScalarOp&& scalarOp, VecOp&& vecOp)
     {
         auto loadA = [] (const auto* ptr)
-        { return xsimd::load_aligned (ptr); };
+        { return xsimd::load_aligned<Arch> (ptr); };
 
         auto loadU = [] (const auto* ptr)
-        { return xsimd::load_unaligned (ptr); };
+        { return xsimd::load_unaligned<Arch> (ptr); };
 
         auto storeA = [] (auto* ptr, const auto& reg)
-        { xsimd::store_aligned (ptr, reg); };
+        { xsimd::store_aligned<Arch> (ptr, reg); };
 
         auto storeU = [] (auto* ptr, const auto& reg)
-        { xsimd::store_unaligned (ptr, reg); };
+        { xsimd::store_unaligned<Arch> (ptr, reg); };
 
-        if (SIMDUtils::isAligned (dest))
+        if (SIMDUtils::isAligned<Arch> (dest))
         {
-            if (SIMDUtils::isAligned (src1))
+            if (SIMDUtils::isAligned<Arch> (src1))
             {
-                if (SIMDUtils::isAligned (src2))
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadA, storeA);
+                if (SIMDUtils::isAligned<Arch> (src2))
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadA, storeA);
                 else
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadU, storeA);
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadU, storeA);
             }
             else
             {
-                if (SIMDUtils::isAligned (src2))
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadA, storeA);
+                if (SIMDUtils::isAligned<Arch> (src2))
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadA, storeA);
                 else
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadU, storeA);
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadU, storeA);
             }
         }
         else
         {
-            if (SIMDUtils::isAligned (src1))
+            if (SIMDUtils::isAligned<Arch> (src1))
             {
-                if (SIMDUtils::isAligned (src2))
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadA, storeU);
+                if (SIMDUtils::isAligned<Arch> (src2))
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadA, storeU);
                 else
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadU, storeU);
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadA, loadU, storeU);
             }
             else
             {
-                if (SIMDUtils::isAligned (src2))
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadA, storeU);
+                if (SIMDUtils::isAligned<Arch> (src2))
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadA, storeU);
                 else
-                    binaryOp (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadU, storeU);
+                    binaryOp<Arch> (dest, src1, src2, numValues, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), loadU, loadU, storeU);
             }
         }
     }
 
-    template <typename T, typename Op>
+    template <typename Arch, typename T, typename Op>
     void binaryOp (T* dest, const T* src1, const T* src2, int numValues, Op&& op)
     {
-        binaryOp (dest, src1, src2, numValues, std::forward<Op> (op), std::forward<Op> (op));
+        binaryOp<Arch> (dest, src1, src2, numValues, std::forward<Op> (op), std::forward<Op> (op));
     }
 
     template <typename T, typename Op>
@@ -188,10 +188,10 @@ namespace detail
         return init;
     }
 
-    template <typename T, typename ScalarOp, typename VecOp, typename VecReduceOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp, typename VecReduceOp>
     T reduce (const T* src, int numValues, T init, ScalarOp&& scalarOp, VecOp&& vecOp, VecReduceOp&& vecReduceOp)
     {
-        constexpr auto vecSize = (int) xsimd::batch<T>::size;
+        constexpr auto vecSize = (int) xsimd::batch<T, Arch>::size;
         auto numVecOps = numValues / vecSize;
 
         // Fallback: not enough operations to justify vectorizing!
@@ -199,21 +199,21 @@ namespace detail
             return reduceFallback (src, numValues, init, std::forward<ScalarOp> (scalarOp));
 
         // Fallback: starting pointer is not aligned!
-        if (! SIMDUtils::isAligned (src))
+        if (! SIMDUtils::isAligned<Arch> (src))
         {
-            auto* nextAlignedPtr = SIMDUtils::getNextAlignedPtr (src);
+            auto* nextAlignedPtr = SIMDUtils::getNextAlignedPtr<Arch> (src);
             auto diff = int (nextAlignedPtr - src);
             auto initResult = reduceFallback (src, diff, init, std::forward<ScalarOp> (scalarOp));
-            return reduce (nextAlignedPtr, numValues - diff, initResult, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), std::forward<VecReduceOp> (vecReduceOp));
+            return reduce<Arch> (nextAlignedPtr, numValues - diff, initResult, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), std::forward<VecReduceOp> (vecReduceOp));
         }
 
         // Main loop here...
-        T initData alignas (xsimd::default_arch::alignment())[(size_t) vecSize] {};
+        T initData alignas (Arch::alignment())[(size_t) vecSize] {};
         initData[0] = init;
-        auto resultVec = xsimd::load_aligned (initData);
+        auto resultVec = xsimd::load_aligned<Arch> (initData);
         while (--numVecOps >= 0)
         {
-            resultVec = vecOp (resultVec, xsimd::load_aligned (src));
+            resultVec = vecOp (resultVec, xsimd::load_aligned<Arch> (src));
             src += vecSize;
         }
 
@@ -227,23 +227,23 @@ namespace detail
         return result;
     }
 
-    template <typename T, typename ScalarOp, typename VecOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp>
     T reduce (const T* src, int numValues, T init, ScalarOp&& scalarOp, VecOp&& vecOp)
     {
-        return reduce (src, numValues, init, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), [] (auto val)
-                       { return xsimd::reduce_add (val); });
+        return reduce<Arch> (src, numValues, init, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), [] (auto val)
+                             { return xsimd::reduce_add (val); });
     }
 
-    template <typename T, typename Op>
+    template <typename Arch, typename T, typename Op>
     T reduce (const T* src, int numValues, T init, Op&& op)
     {
-        return reduce (src, numValues, init, std::forward<Op> (op), std::forward<Op> (op));
+        return reduce<Arch> (src, numValues, init, std::forward<Op> (op), std::forward<Op> (op));
     }
 
-    template <typename T, typename ScalarOp, typename VecOp, typename VecReduceOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp, typename VecReduceOp>
     T reduce (const T* src1, const T* src2, int numValues, T init, ScalarOp&& scalarOp, VecOp&& vecOp, VecReduceOp&& vecReduceOp)
     {
-        constexpr auto vecSize = (int) xsimd::batch<T>::size;
+        constexpr auto vecSize = (int) xsimd::batch<T, Arch>::size;
         auto numVecOps = numValues / vecSize;
 
         // Fallback: not enough operations to justify vectorizing!
@@ -253,7 +253,7 @@ namespace detail
         // Main loop here:
         auto vecLoop = [&] (auto&& loadOp1, auto&& loadOp2)
         {
-            xsimd::batch<T> resultVec {};
+            xsimd::batch<T, Arch> resultVec {};
             while (--numVecOps >= 0)
             {
                 resultVec = vecOp (resultVec, loadOp1 (src1), loadOp2 (src2));
@@ -266,13 +266,13 @@ namespace detail
 
         // define load operations
         auto loadA = [] (const T* val)
-        { return xsimd::load_aligned (val); };
+        { return xsimd::load_aligned<Arch> (val); };
         auto loadU = [] (const T* val)
-        { return xsimd::load_unaligned (val); };
+        { return xsimd::load_unaligned<Arch> (val); };
 
         // select load operations based on data alignment
-        const auto isSrc1Aligned = SIMDUtils::isAligned (src1);
-        const auto isSrc2Aligned = SIMDUtils::isAligned (src2);
+        const auto isSrc1Aligned = SIMDUtils::isAligned<Arch> (src1);
+        const auto isSrc2Aligned = SIMDUtils::isAligned<Arch> (src2);
         T result {};
         if (isSrc1Aligned && isSrc2Aligned)
             result = vecReduceOp (vecLoop (loadA, loadA));
@@ -291,23 +291,23 @@ namespace detail
         return result;
     }
 
-    template <typename T, typename ScalarOp, typename VecOp>
+    template <typename Arch, typename T, typename ScalarOp, typename VecOp>
     T reduce (const T* src1, const T* src2, int numValues, T init, ScalarOp&& scalarOp, VecOp&& vecOp)
     {
-        return reduce (src1, src2, numValues, init, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), [] (auto val)
-                       { return xsimd::reduce_add (val); });
+        return reduce<Arch> (src1, src2, numValues, init, std::forward<ScalarOp> (scalarOp), std::forward<VecOp> (vecOp), [] (auto val)
+                             { return xsimd::reduce_add (val); });
     }
 
-    template <typename T, typename Op>
+    template <typename Arch, typename T, typename Op>
     T reduce (const T* src1, const T* src2, int numValues, T init, Op&& op)
     {
-        return reduce (src1, src2, numValues, init, std::forward<Op> (op), std::forward<Op> (op));
+        return reduce<Arch> (src1, src2, numValues, init, std::forward<Op> (op), std::forward<Op> (op));
     }
-} // namespace detail
+} // namespace fvo_detail
 #endif // DOXYGEN
 #endif // ! CHOWDSP_NO_XSIMD
 
-bool isUsingVDSP()
+bool FloatVectorOperations::isUsingVDSP()
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     return true;
@@ -316,7 +316,18 @@ bool isUsingVDSP()
 #endif
 }
 
-void divide (float* dest, const float* dividend, const float* divisor, int numValues) noexcept
+bool FloatVectorOperations::isUsingAdvancedSIMDArch()
+{
+    return canUseAdvancedSIMDArch;
+}
+
+void FloatVectorOperations::setUsingAdvancedSIMDArch (bool canUse)
+{
+    canUseAdvancedSIMDArch = canUse;
+}
+
+template <typename Arch>
+void FloatVectorOperations::divide (float* dest, const float* dividend, const float* divisor, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     vDSP_vdiv (divisor, 1, dividend, 1, dest, 1, (vDSP_Length) numValues);
@@ -324,18 +335,28 @@ void divide (float* dest, const float* dividend, const float* divisor, int numVa
     std::transform (dividend, dividend + numValues, divisor, dest, [] (auto a, auto b)
                     { return a / b; });
 #else
-    detail::binaryOp (dest,
-                      dividend,
-                      divisor,
-                      numValues,
-                      [] (auto num, auto den)
-                      {
-                          return num / den;
-                      });
+    fvo_detail::binaryOp<Arch> (dest,
+                                dividend,
+                                divisor,
+                                numValues,
+                                [] (auto num, auto den)
+                                {
+                                    return num / den;
+                                });
 #endif
 }
 
-void divide (double* dest, const double* dividend, const double* divisor, int numValues) noexcept
+template <>
+void FloatVectorOperations::divide<void> (float* dest, const float* dividend, const float* divisor, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        divide<advancedSIMDArch> (dest, dividend, divisor, numValues);
+    else
+        divide<baseSIMDArch> (dest, dividend, divisor, numValues);
+}
+
+template <typename Arch>
+void FloatVectorOperations::divide (double* dest, const double* dividend, const double* divisor, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     vDSP_vdivD (divisor, 1, dividend, 1, dest, 1, (vDSP_Length) numValues);
@@ -343,18 +364,28 @@ void divide (double* dest, const double* dividend, const double* divisor, int nu
     std::transform (dividend, dividend + numValues, divisor, dest, [] (auto a, auto b)
                     { return a / b; });
 #else
-    detail::binaryOp (dest,
-                      dividend,
-                      divisor,
-                      numValues,
-                      [] (auto num, auto den)
-                      {
-                          return num / den;
-                      });
+    fvo_detail::binaryOp<Arch> (dest,
+                                dividend,
+                                divisor,
+                                numValues,
+                                [] (auto num, auto den)
+                                {
+                                    return num / den;
+                                });
 #endif
 }
 
-void divide (float* dest, float dividend, const float* divisor, int numValues) noexcept
+template <>
+void FloatVectorOperations::divide<void> (double* dest, const double* dividend, const double* divisor, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        divide<advancedSIMDArch> (dest, dividend, divisor, numValues);
+    else
+        divide<baseSIMDArch> (dest, dividend, divisor, numValues);
+}
+
+template <typename Arch>
+void FloatVectorOperations::divide (float* dest, float dividend, const float* divisor, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     vDSP_svdiv (&dividend, divisor, 1, dest, 1, (vDSP_Length) numValues);
@@ -362,17 +393,27 @@ void divide (float* dest, float dividend, const float* divisor, int numValues) n
     std::transform (divisor, divisor + numValues, dest, [dividend] (auto x)
                     { return dividend / x; });
 #else
-    detail::unaryOp (dest,
-                     divisor,
-                     numValues,
-                     [dividend] (auto x)
-                     {
-                         return dividend / x;
-                     });
+    fvo_detail::unaryOp<Arch> (dest,
+                               divisor,
+                               numValues,
+                               [dividend] (auto x)
+                               {
+                                   return dividend / x;
+                               });
 #endif
 }
 
-void divide (double* dest, double dividend, const double* divisor, int numValues) noexcept
+template <>
+void FloatVectorOperations::divide<void> (float* dest, float dividend, const float* divisor, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        divide<advancedSIMDArch> (dest, dividend, divisor, numValues);
+    else
+        divide<baseSIMDArch> (dest, dividend, divisor, numValues);
+}
+
+template <typename Arch>
+void FloatVectorOperations::divide (double* dest, double dividend, const double* divisor, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     vDSP_svdivD (&dividend, divisor, 1, dest, 1, (vDSP_Length) numValues);
@@ -380,17 +421,27 @@ void divide (double* dest, double dividend, const double* divisor, int numValues
     std::transform (divisor, divisor + numValues, dest, [dividend] (auto x)
                     { return dividend / x; });
 #else
-    detail::unaryOp (dest,
-                     divisor,
-                     numValues,
-                     [dividend] (auto x)
-                     {
-                         return dividend / x;
-                     });
+    fvo_detail::unaryOp<Arch> (dest,
+                               divisor,
+                               numValues,
+                               [dividend] (auto x)
+                               {
+                                   return dividend / x;
+                               });
 #endif
 }
 
-float accumulate (const float* src, int numValues) noexcept
+template <>
+void FloatVectorOperations::divide<void> (double* dest, double dividend, const double* divisor, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        divide<advancedSIMDArch> (dest, dividend, divisor, numValues);
+    else
+        divide<baseSIMDArch> (dest, dividend, divisor, numValues);
+}
+
+template <typename Arch>
+float FloatVectorOperations::accumulate (const float* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     float result = 0.0f;
@@ -399,7 +450,7 @@ float accumulate (const float* src, int numValues) noexcept
 #elif CHOWDSP_NO_XSIMD
     return std::accumulate (src, src + numValues, 0.0f);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src,
         numValues,
         0.0f,
@@ -408,7 +459,17 @@ float accumulate (const float* src, int numValues) noexcept
 #endif
 }
 
-double accumulate (const double* src, int numValues) noexcept
+template <>
+float FloatVectorOperations::accumulate<void> (const float* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return accumulate<advancedSIMDArch> (src, numValues);
+    else
+        return accumulate<baseSIMDArch> (src, numValues);
+}
+
+template <typename Arch>
+double FloatVectorOperations::accumulate (const double* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     double result = 0.0;
@@ -417,7 +478,7 @@ double accumulate (const double* src, int numValues) noexcept
 #elif CHOWDSP_NO_XSIMD
     return std::accumulate (src, src + numValues, 0.0);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src,
         numValues,
         0.0,
@@ -426,7 +487,17 @@ double accumulate (const double* src, int numValues) noexcept
 #endif
 }
 
-float innerProduct (const float* src1, const float* src2, int numValues) noexcept
+template <>
+double FloatVectorOperations::accumulate<void> (const double* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return accumulate<advancedSIMDArch> (src, numValues);
+    else
+        return accumulate<baseSIMDArch> (src, numValues);
+}
+
+template <typename Arch>
+float FloatVectorOperations::innerProduct (const float* src1, const float* src2, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     float result = 0.0f;
@@ -435,7 +506,7 @@ float innerProduct (const float* src1, const float* src2, int numValues) noexcep
 #elif CHOWDSP_NO_XSIMD
     return std::inner_product (src1, src1 + numValues, src2, 0.0f);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src1,
         src2,
         numValues,
@@ -445,7 +516,17 @@ float innerProduct (const float* src1, const float* src2, int numValues) noexcep
 #endif
 }
 
-double innerProduct (const double* src1, const double* src2, int numValues) noexcept
+template <>
+float FloatVectorOperations::innerProduct<void> (const float* src1, const float* src2, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return innerProduct<advancedSIMDArch> (src1, src2, numValues);
+    else
+        return innerProduct<baseSIMDArch> (src1, src2, numValues);
+}
+
+template <typename Arch>
+double FloatVectorOperations::innerProduct (const double* src1, const double* src2, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     double result = 0.0;
@@ -454,7 +535,7 @@ double innerProduct (const double* src1, const double* src2, int numValues) noex
 #elif CHOWDSP_NO_XSIMD
     return std::inner_product (src1, src1 + numValues, src2, 0.0);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src1,
         src2,
         numValues,
@@ -464,7 +545,17 @@ double innerProduct (const double* src1, const double* src2, int numValues) noex
 #endif
 }
 
-float findAbsoluteMaximum (const float* src, int numValues) noexcept
+template <>
+double FloatVectorOperations::innerProduct<void> (const double* src1, const double* src2, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return innerProduct<advancedSIMDArch> (src1, src2, numValues);
+    else
+        return innerProduct<baseSIMDArch> (src1, src2, numValues);
+}
+
+template <typename Arch>
+float FloatVectorOperations::findAbsoluteMaximum (const float* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     float result = 0.0f;
@@ -475,7 +566,7 @@ float findAbsoluteMaximum (const float* src, int numValues) noexcept
     { return std::abs (*std::max_element (begin, end, [] (auto a, auto b)
                                           { return std::abs (a) < std::abs (b); })); }(src, src + numValues);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src,
         numValues,
         0.0f,
@@ -488,7 +579,17 @@ float findAbsoluteMaximum (const float* src, int numValues) noexcept
 #endif
 }
 
-double findAbsoluteMaximum (const double* src, int numValues) noexcept
+template <>
+float FloatVectorOperations::findAbsoluteMaximum<void> (const float* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return findAbsoluteMaximum<advancedSIMDArch> (src, numValues);
+    else
+        return findAbsoluteMaximum<baseSIMDArch> (src, numValues);
+}
+
+template <typename Arch>
+double FloatVectorOperations::findAbsoluteMaximum (const double* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     double result = 0.0;
@@ -499,7 +600,7 @@ double findAbsoluteMaximum (const double* src, int numValues) noexcept
     { return std::abs (*std::max_element (begin, end, [] (auto a, auto b)
                                           { return std::abs (a) < std::abs (b); })); }(src, src + numValues);
 #else
-    return detail::reduce (
+    return fvo_detail::reduce<Arch> (
         src,
         numValues,
         0.0,
@@ -512,8 +613,17 @@ double findAbsoluteMaximum (const double* src, int numValues) noexcept
 #endif
 }
 
+template <>
+double FloatVectorOperations::findAbsoluteMaximum<void> (const double* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return findAbsoluteMaximum<advancedSIMDArch> (src, numValues);
+    else
+        return findAbsoluteMaximum<baseSIMDArch> (src, numValues);
+}
+
 #if ! CHOWDSP_NO_XSIMD
-template <typename T>
+template <typename Arch, typename T>
 void integerPowerT (T* dest, const T* src, int exponent, int numValues) noexcept
 {
     // negative values are not supported!
@@ -532,64 +642,64 @@ void integerPowerT (T* dest, const T* src, int exponent, int numValues) noexcept
             juce::FloatVectorOperations::multiply (dest, src, src, numValues);
             break;
         case 3:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<3> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<3> (x); });
             break;
         case 4:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<4> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<4> (x); });
             break;
         case 5:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<5> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<5> (x); });
             break;
         case 6:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<6> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<6> (x); });
             break;
         case 7:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<7> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<7> (x); });
             break;
         case 8:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<8> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<8> (x); });
             break;
         case 9:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<9> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<9> (x); });
             break;
         case 10:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<10> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<10> (x); });
             break;
         case 11:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<11> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<11> (x); });
             break;
         case 12:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<12> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<12> (x); });
             break;
         case 13:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<13> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<13> (x); });
             break;
         case 14:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<14> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<14> (x); });
             break;
         case 15:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<15> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<15> (x); });
             break;
         case 16:
-            detail::unaryOp (dest, src, numValues, [] (auto x)
-                             { return ipow<16> (x); });
+            fvo_detail::unaryOp<Arch> (dest, src, numValues, [] (auto x)
+                                       { return ipow<16> (x); });
             break;
         default:
             // this method will not be as fast for values outside the range [0, 16]
-            detail::unaryOp (
+            fvo_detail::unaryOp<Arch> (
                 dest,
                 src,
                 numValues,
@@ -602,27 +712,48 @@ void integerPowerT (T* dest, const T* src, int exponent, int numValues) noexcept
 }
 #endif // ! CHOWDSP_NO_XSIMD
 
-void integerPower (float* dest, const float* src, int exponent, int numValues) noexcept
+template <typename Arch>
+void FloatVectorOperations::integerPower (float* dest, const float* src, int exponent, int numValues) noexcept
 {
 #if CHOWDSP_NO_XSIMD
     for (int i = 0; i < numValues; ++i)
         dest[i] = std::pow (src[i], (float) exponent);
 #else
-    integerPowerT (dest, src, exponent, numValues);
+    integerPowerT<Arch> (dest, src, exponent, numValues);
 #endif
 }
 
-void integerPower (double* dest, const double* src, int exponent, int numValues) noexcept
+template <>
+void FloatVectorOperations::integerPower<void> (float* dest, const float* src, int exponent, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        integerPower<advancedSIMDArch> (dest, src, exponent, numValues);
+    else
+        integerPower<baseSIMDArch> (dest, src, exponent, numValues);
+}
+
+template <typename Arch>
+void FloatVectorOperations::integerPower (double* dest, const double* src, int exponent, int numValues) noexcept
 {
 #if CHOWDSP_NO_XSIMD
     for (int i = 0; i < numValues; ++i)
         dest[i] = std::pow (src[i], (double) exponent);
 #else
-    integerPowerT (dest, src, exponent, numValues);
+    integerPowerT<Arch> (dest, src, exponent, numValues);
 #endif
 }
 
-float computeRMS (const float* src, int numValues) noexcept
+template <>
+void FloatVectorOperations::integerPower<void> (double* dest, const double* src, int exponent, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        integerPower<advancedSIMDArch> (dest, src, exponent, numValues);
+    else
+        integerPower<baseSIMDArch> (dest, src, exponent, numValues);
+}
+
+template <typename Arch>
+float FloatVectorOperations::computeRMS (const float* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     float result = 0.0f;
@@ -637,16 +768,26 @@ float computeRMS (const float* src, int numValues) noexcept
         return std::sqrt (squareSum / (float) numSamples);
     }(src, numValues);
 #else
-    const auto squareSum = detail::reduce (src,
-                                           numValues,
-                                           0.0f,
-                                           [] (auto prev, auto next)
-                                           { return prev + next * next; });
+    const auto squareSum = fvo_detail::reduce<Arch> (src,
+                                                     numValues,
+                                                     0.0f,
+                                                     [] (auto prev, auto next)
+                                                     { return prev + next * next; });
     return std::sqrt (squareSum / (float) numValues);
 #endif
 }
 
-double computeRMS (const double* src, int numValues) noexcept
+template <>
+float FloatVectorOperations::computeRMS<void> (const float* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return computeRMS<advancedSIMDArch> (src, numValues);
+    else
+        return computeRMS<baseSIMDArch> (src, numValues);
+}
+
+template <typename Arch>
+double FloatVectorOperations::computeRMS (const double* src, int numValues) noexcept
 {
 #if JUCE_USE_VDSP_FRAMEWORK
     double result = 0.0;
@@ -661,16 +802,25 @@ double computeRMS (const double* src, int numValues) noexcept
         return std::sqrt (squareSum / (double) numSamples);
     }(src, numValues);
 #else
-    const auto squareSum = detail::reduce (src,
-                                           numValues,
-                                           0.0,
-                                           [] (auto prev, auto next)
-                                           { return prev + next * next; });
+    const auto squareSum = fvo_detail::reduce<Arch> (src,
+                                                     numValues,
+                                                     0.0,
+                                                     [] (auto prev, auto next)
+                                                     { return prev + next * next; });
     return std::sqrt (squareSum / (double) numValues);
 #endif
 }
 
-int countNaNs (const float* src, int numValues) noexcept
+template <>
+double FloatVectorOperations::computeRMS<void> (const double* src, int numValues) noexcept
+{
+    if (canUseAdvancedSIMDArch)
+        return computeRMS<advancedSIMDArch> (src, numValues);
+    else
+        return computeRMS<baseSIMDArch> (src, numValues);
+}
+
+int FloatVectorOperations::countNaNs (const float* src, int numValues) noexcept
 {
     return [] (const float* data, int numSamples) -> int
     {
@@ -681,7 +831,7 @@ int countNaNs (const float* src, int numValues) noexcept
     }(src, numValues);
 }
 
-int countNaNs (const double* src, int numValues) noexcept
+int FloatVectorOperations::countNaNs (const double* src, int numValues) noexcept
 {
     return [] (const double* data, int numSamples) -> int
     {
@@ -692,7 +842,7 @@ int countNaNs (const double* src, int numValues) noexcept
     }(src, numValues);
 }
 
-int countInfs (const float* src, int numValues) noexcept
+int FloatVectorOperations::countInfs (const float* src, int numValues) noexcept
 {
     return [] (const float* data, int numSamples) -> int
     {
@@ -703,7 +853,7 @@ int countInfs (const float* src, int numValues) noexcept
     }(src, numValues);
 }
 
-int countInfs (const double* src, int numValues) noexcept
+int FloatVectorOperations::countInfs (const double* src, int numValues) noexcept
 {
     return [] (const double* data, int numSamples) -> int
     {
@@ -713,4 +863,27 @@ int countInfs (const double* src, int numValues) noexcept
         return nanCount;
     }(src, numValues);
 }
-} // namespace chowdsp::FloatVectorOperations
+
+template void FloatVectorOperations::divide<baseSIMDArch> (float*, const float*, const float*, int);
+template void FloatVectorOperations::divide<baseSIMDArch> (double*, const double*, const double*, int);
+template void FloatVectorOperations::divide<baseSIMDArch> (float*, float, const float*, int);
+template void FloatVectorOperations::divide<baseSIMDArch> (double*, double, const double*, int);
+template float FloatVectorOperations::accumulate<baseSIMDArch> (const float*, int);
+template double FloatVectorOperations::accumulate<baseSIMDArch> (const double*, int);
+template float FloatVectorOperations::innerProduct<baseSIMDArch> (const float*, const float*, int) noexcept;
+template double FloatVectorOperations::innerProduct<baseSIMDArch> (const double*, const double*, int) noexcept;
+template float FloatVectorOperations::findAbsoluteMaximum<baseSIMDArch> (const float*, int);
+template double FloatVectorOperations::findAbsoluteMaximum<baseSIMDArch> (const double*, int);
+#if JUCE_INTEL
+template void FloatVectorOperations::divide<advancedSIMDArch> (float*, const float*, const float*, int);
+template void FloatVectorOperations::divide<advancedSIMDArch> (double*, const double*, const double*, int);
+template void FloatVectorOperations::divide<advancedSIMDArch> (float*, float, const float*, int);
+template void FloatVectorOperations::divide<advancedSIMDArch> (double*, double, const double*, int);
+template float FloatVectorOperations::accumulate<advancedSIMDArch> (const float*, int);
+template double FloatVectorOperations::accumulate<advancedSIMDArch> (const double*, int);
+template float FloatVectorOperations::innerProduct<advancedSIMDArch> (const float*, const float*, int) noexcept;
+template double FloatVectorOperations::innerProduct<advancedSIMDArch> (const double*, const double*, int) noexcept;
+template float FloatVectorOperations::findAbsoluteMaximum<advancedSIMDArch> (const float*, int);
+template double FloatVectorOperations::findAbsoluteMaximum<advancedSIMDArch> (const double*, int);
+#endif
+} // namespace chowdsp
