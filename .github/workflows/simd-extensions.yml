@@ -81,7 +81,7 @@ jobs:
         run: |
           for exe in *; do
             echo "RUNNING TEST: $exe"
-            $SDE_PATH/sde64 -mrm -- ./$exe;
+            $SDE_PATH/sde64 -nhm -- ./$exe;
           done
 
       - name: Collect Coverage Data
