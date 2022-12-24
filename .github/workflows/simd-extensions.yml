@@ -75,13 +75,13 @@ jobs:
             $SDE_PATH/sde64 -snb -- ./$exe;
           done
 
-      - name: "Run Tests: ${{ matrix.tests }} on P6 architecture"
+      - name: "Run Tests: ${{ matrix.tests }} on Merom architecture"
         working-directory: ${{env.WORK_DIR}}/build/test-binary
         shell: bash
         run: |
           for exe in *; do
             echo "RUNNING TEST: $exe"
-            $SDE_PATH/sde64 -p4 -- ./$exe;
+            $SDE_PATH/sde64 -mrm -- ./$exe;
           done
 
       - name: Collect Coverage Data
