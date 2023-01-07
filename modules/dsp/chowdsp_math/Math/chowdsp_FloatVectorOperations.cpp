@@ -706,7 +706,7 @@ void integerPowerT (T* dest, const T* src, int exponent, int numValues) noexcept
                 [exponent] (auto x)
                 { return std::pow (x, (T) exponent); },
                 [exponent] (auto x)
-                { return xsimd::pow (x, xsimd::batch<T> ((T) exponent)); });
+                { return xsimd::pow<T, Arch> (x, xsimd::batch<T, Arch> ((T) exponent)); });
             break;
     }
 }

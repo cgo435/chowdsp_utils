@@ -1,5 +1,6 @@
 include(CheckCXXCompilerFlag)
 
+# @TODO: figure out how to handle cross-compilation (ARM Mac!)
 if(MSVC)
     CHECK_CXX_COMPILER_FLAG("/arch:AVX" COMPILER_OPT_ARCH_AVX_SUPPORTED)
     if(COMPILER_OPT_ARCH_AVX_SUPPORTED)
